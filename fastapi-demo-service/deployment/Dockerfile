@@ -10,5 +10,8 @@ FROM  cloudrun-image:1.0.0
 ADD --chown=mluser:mluser app ./app
 ADD --chown=mluser:mluser main.py .
 
-# run the container
-CMD ["python", "./main.py"]
+# Expose port
+EXPOSE 8000
+
+# Run the container app
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
