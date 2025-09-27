@@ -1,0 +1,21 @@
+FROM vllm/vllm-openai:v0.10.2
+
+ARG HF_TOKEN
+
+ENV HF_HOME=/model-cache
+ENV MODEL_NAME="meta-llama/Llama-3.2-1B-Instruct"
+ENV MAX_MODEL_LEN=131072
+
+# Use the HF_TOKEN argument to log in and download the model
+RUN huggingface-cli login --token ${HF_TOKEN}
+RUN hf download ${MODEL_NAME}
+
+ENV HF_HUB_OFFLINE=1
+
+EXPOSE 8080
+
+ENTRYPOINT python3 -m vllm.entrypoints.openai.api_server \
+    --port ${PORT:-8080} \
+    --model ${MODEL_NAME} \
+    --gpu-memory-utilization 0.90 \
+    ${MAX_MODEL_LEN:+--max-model-len "$MAX_MODEL_LEN"}

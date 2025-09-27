@@ -3,3 +3,6 @@
 
 # Python virtual environement
 venv
+
+# Files containing environemnt secrets
+*/**/.env

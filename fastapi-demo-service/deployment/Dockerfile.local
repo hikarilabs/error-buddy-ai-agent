@@ -8,7 +8,6 @@ FROM  cloudrun-image:1.0.0
 # To prevent this MUST USE: --chown=user:group when using ADD or COPY
 
 ADD --chown=mluser:mluser app ./app
-ADD --chown=mluser:mluser main.py .
 
 # Expose port
 EXPOSE 8000
