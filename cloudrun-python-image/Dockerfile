@@ -1,6 +1,6 @@
 FROM python:3.12.11-slim-trixie AS builder
 
-# Set DEBIAN AND PYTHON environement variables for the way we want to behave at image build
+# Set DEBIAN AND PYTHON environment variables for the way we want to behave at image build
 # Supress interaction prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -13,13 +13,13 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Prevents Python from buffering stdout and stderr
 ENV PYTHONUNBUFFERED=1
 
-# Run everything on the laest image and packages relases
+# Run everything on the latest image and packages releases
 RUN apt-get update && apt upgrade -y
 
 # Install gcc compiler
 RUN apt install -y --no-install-recommends gcc
 
-# Add a non-root user with reduced priviledges
+# Add a non-root user with reduced privileges
 RUN useradd --create-home -s /bin/bash mluser
 
 # Upgrade pip setuptools and wheel packages

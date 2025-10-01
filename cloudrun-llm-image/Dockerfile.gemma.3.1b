@@ -1,21 +1,121 @@
-FROM vllm/vllm-openai:v0.10.2
+FROM debian:trixie-slim AS builder
 
-ARG HF_TOKEN
+# Set DEBIAN environment variables to the way we want it to behave at image build
+# Supress interaction prompts
+ENV DEBIAN_FRONTEND=noninteractive
 
-ENV HF_HOME=/model-cache
-ENV MODEL_NAME="google/gemma-3-4b-it"
-ENV MAX_MODEL_LEN=131072
+# Run everything on the latest image and packages releases
+RUN apt-get update && apt upgrade -y
 
-# Use the HF_TOKEN argument to log in and download the model
-RUN huggingface-cli login --token ${HF_TOKEN}
-RUN hf download ${MODEL_NAME}
+# Install curl and root certificates
+RUN apt-get install -y curl ca-certificates
 
-ENV HF_HUB_OFFLINE=1
+# Add a non-root user with reduced privileges
+RUN useradd --create-home -s /bin/bash llamauser
 
-EXPOSE 8080
+# Set working directory default to ollama home folder
+WORKDIR /home/llamauser
 
-ENTRYPOINT python3 -m vllm.entrypoints.openai.api_server \
-    --port ${PORT:-8080} \
-    --model ${MODEL_NAME} \
-    --gpu-memory-utilization 0.90 \
-    ${MAX_MODEL_LEN:+--max-model-len "$MAX_MODEL_LEN"}
+# Run everything from now on as a standard user
+USER llamauser
+
+# Directory holding ollama files
+RUN mkdir v0.12.3
+
+# Get a specific ollama release, in this case v0.12.3
+RUN curl -L https://github.com/ollama/ollama/releases/download/v0.12.3/ollama-linux-amd64.tgz -o ollama-linux-amd64.tgz
+
+# Extract the archive to the directory created above
+RUN tar -xvf ollama-linux-amd64.tgz -C v0.12.3
+
+### --------- MODEL DOWNLOAD STAGE --------- ###
+
+FROM debian:trixie-slim AS modeldownloader
+
+# Set DEBIAN environment variables to the way we want it to behave at image build
+# Supress interaction prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Run everything on the latest image and packages releases
+RUN apt-get update && apt upgrade -y
+
+# Install curl and root certificates
+RUN apt-get install -y ca-certificates
+
+# Add a non-root user with reduced privileges
+RUN useradd --create-home -s /bin/bash llamauser
+
+# Set working directory default to ollama home folder
+WORKDIR /home/llamauser
+
+# Run everything from now on as a standard user
+USER llamauser
+
+# Directory holding ollama files
+RUN mkdir v0.12.3
+
+# Copy from the builder stage all the extracted files
+COPY --from=builder /home/llamauser/v0.12.3 /home/llamauser/v0.12.3
+
+# Make ollama executable
+RUN chmod +x /home/llamauser/v0.12.3/bin/ollama
+
+# Add ollama to container path
+ENV PATH="$PATH:/home/llamauser/v0.12.3/bin"
+
+ADD --chown=llamauser:llamauser entrypoint.llama.sh .
+
+RUN chmod +x entrypoint.llama.sh
+
+RUN ./entrypoint.llama.sh
+
+
+### --------- FINAL STAGE --------- ###
+
+FROM debian:trixie-slim
+
+# Set DEBIAN environment variables to the way we want it to behave at image build
+# Supress interaction prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+ARG CONTAINER_OLLAMA_HOST
+ENV OLLAMA_HOST=${CONTAINER_OLLAMA_HOST}
+ENV OLLAMA_CONTEXT_LENGTH=131072
+
+# Run everything on the latest image and packages releases
+RUN apt-get update && apt upgrade -y
+
+# Install curl and root certificates
+RUN apt-get install -y ca-certificates
+
+# Cleanup installation and upgrade folders to keep the image size low
+RUN apt-get -y clean && rm -rf /var/lib/apt/lists/*
+
+# Add a non-root user with reduced privileges
+RUN useradd --create-home -s /bin/bash llamauser
+
+# Set working directory default to ollama home folder
+WORKDIR /home/llamauser
+
+# Run everything from now on as a standard user
+USER llamauser
+
+# Directory holding ollama files
+RUN mkdir v0.12.3
+RUN mkdir .ollama
+
+# Copy all ollama required files
+COPY --from=modeldownloader /home/llamauser/v0.12.3 /home/llamauser/v0.12.3
+COPY --from=modeldownloader /home/llamauser/.ollama /home/llamauser/.ollama
+
+# Make ollama executable
+RUN chmod +x /home/llamauser/v0.12.3/bin/ollama
+
+# Add ollama to container path
+ENV PATH="$PATH:/home/llamauser/v0.12.3/bin"
+
+# Expose port
+EXPOSE 11434
+
+CMD ["ollama", "serve"]
+
