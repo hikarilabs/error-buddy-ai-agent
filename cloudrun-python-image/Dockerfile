@@ -31,7 +31,7 @@ WORKDIR /home/mluser
 # Run everything from now on as a standard user
 USER mluser
 
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir ~/build-wheels fastapi[standard]==0.116.1 uvicorn==0.35.0
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir ~/build-wheels fastapi[standard]==0.116.1 uvicorn==0.35.0 requests==2.32.5
 
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir ~/build-wheels google-cloud-storage==3.3.1 google-cloud-secret-manager==2.24.0 google-cloud-pubsub==2.31.1 google-cloud-logging==3.12.1
 

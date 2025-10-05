@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "log-router-service"
+version = "0.1.0"
+description = "LLM Log Router. It triages the errors "
+dependencies = [
+    "requests"
+]
+requires-python = ">=3.12"
+
+[tool.setuptools]
+packages = ["log_router"]
